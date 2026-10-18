@@ -1,0 +1,27 @@
+[
+  {
+    "type": "BOX_JUMP",
+    "frame": 4,
+    "track_id": "1",
+    "other_id": "",
+    "score": 50.3883,
+    "reason": "Bounding box differs strongly from Kalman prediction",
+    "details": {
+      "mahalanobis_sq": 930.512,
+      "threshold": 18.467,
+      "previous_frame": 3,
+      "previous_box": [
+        40.0,
+        20.0,
+        60.0,
+        40.0
+      ],
+      "current_box": [
+        110.0,
+        20.0,
+        130.0,
+        40.0
+      ]
+    }
+  }
+]

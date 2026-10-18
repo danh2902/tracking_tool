@@ -1,0 +1,2 @@
+﻿type,frame,track_id,other_id,score,reason,details
+BOX_JUMP,4,1,,50.3883,Bounding box differs strongly from Kalman prediction,"{""mahalanobis_sq"": 930.512, ""threshold"": 18.467, ""previous_frame"": 3, ""previous_box"": [40.0, 20.0, 60.0, 40.0], ""current_box"": [110.0, 20.0, 130.0, 40.0]}"

@@ -1,0 +1,12 @@
+<annotations><version>1.1</version>
+<track id="1" label="car">
+<box frame="0" outside="0" occluded="0" xtl="10" ytl="20" xbr="30" ybr="40"/>
+<box frame="1" outside="0" occluded="0" xtl="20" ytl="20" xbr="40" ybr="40"/>
+<box frame="2" outside="0" occluded="0" xtl="30" ytl="20" xbr="50" ybr="40"/>
+<box frame="3" outside="0" occluded="0" xtl="40" ytl="20" xbr="60" ybr="40"/>
+<box frame="4" outside="0" occluded="0" xtl="110" ytl="20" xbr="130" ybr="40"/>
+</track>
+<track id="2" label="car">
+<box frame="7" outside="0" occluded="0" xtl="70" ytl="20" xbr="90" ybr="40"/>
+<box frame="8" outside="0" occluded="0" xtl="80" ytl="20" xbr="100" ybr="40"/>
+</track></annotations>

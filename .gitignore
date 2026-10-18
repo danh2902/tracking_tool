@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+results/
+results_bdd/
+.env
