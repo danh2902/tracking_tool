@@ -267,8 +267,16 @@ def report(issues, output, n_tracks, n_boxes, settings):
 def main():
     p=argparse.ArgumentParser(description='QA existing 2D tracking annotations (never edits input)')
     p.add_argument('--input',required=True,type=Path)
-    p.add_argument('--format',choices=['cvat','bdd'],required=True)
+    p.add_argument('--format',choices=['cvat','bdd','nuscenes'],required=True)
     p.add_argument('--output',type=Path,default=Path('results'))
+    p.add_argument('--manifest',type=Path,help='Required for nuScenes: sample_token to scene/frame/timestamp JSON')
+    p.add_argument('--max-speed',type=float,default=55.0,help='nuScenes speed threshold (m/s)')
+    p.add_argument('--max-yaw-rate',type=float,default=3.0,help='nuScenes yaw rate threshold (rad/s)')
+    p.add_argument('--max-size-change',type=float,default=0.6,help='nuScenes relative 3D size change')
+    p.add_argument('--max-time-gap',type=float,default=10.0,help='nuScenes fragmentation max time gap (s)')
+    p.add_argument('--fragment-max-dist-3d',type=float,default=4.0,help='nuScenes fragmentation distance (m)')
+    p.add_argument('--switch-max-dist-3d',type=float,default=4.0,help='nuScenes ID switch association distance (m)')
+    p.add_argument('--switch-min-gain-3d',type=float,default=1.0,help='nuScenes ID switch cost gain (m)')
     p.add_argument('--max-gap',type=int,default=12,help='Maximum missing frames between two candidate fragments')
     p.add_argument('--fragment-max-dist',type=float,default=0.8,help='Center distance / box diagonal')
     p.add_argument('--fragment-min-iou',type=float,default=0.1)
@@ -279,6 +287,17 @@ def main():
     args=p.parse_args()
     if args.max_gap<0 or args.min_history<2 or not 0<args.jump_confidence<1:
         p.error('Invalid thresholds')
+    if args.format == 'nuscenes':
+        if not args.manifest:
+            p.error('--manifest is required for nuScenes')
+        from nuscenes_qa import run_nuscenes
+        settings = {k: getattr(args, k) for k in ('jump_confidence', 'min_history', 'max_speed',
+            'max_yaw_rate', 'max_size_change', 'max_gap', 'max_time_gap',
+            'fragment_max_dist_3d', 'switch_max_dist_3d', 'switch_min_gain_3d')}
+        n_tracks, n_boxes, issues, counts = run_nuscenes(args.input, args.manifest, args.output, settings)
+        print(f'Tracks: {n_tracks} | Boxes: {n_boxes} | Alerts: {len(issues)} | {counts}')
+        print(f'Reports: {args.output.resolve()}')
+        return
     boxes=parse_cvat(args.input) if args.format=='cvat' else parse_bdd(args.input)
     tracks=defaultdict(list)
     for b in boxes:

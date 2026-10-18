@@ -43,3 +43,8 @@ Outputs: `issues.csv`, `issues.json`, `summary.json`, `report.html`. Open HTML i
 - CVAT XML keyframe tracks may omit interpolated frames. Exported keyframes are used as-is; for rigorous QA of frame-by-frame motion, export dense annotations or expand interpolation first.
 - BDD parser assumes per-video frames and stable label IDs. Keep one video per input to avoid mixing sequences.
 - Scores across error types are not calibrated probabilities.
+
+
+## nuScenes Tracking 3D + Streamlit
+
+Install all dependencies with `python -m pip install -r requirements.txt` (UI and CLI combined). Run `python -m streamlit run app.py`. Select nuScenes and upload tracking result JSON **plus sample manifest**. See [NUSCENES_GUIDE.md](NUSCENES_GUIDE.md) for manifest schema, CLI example and limitations. The legacy `requirements_ui.txt` has been removed.
