@@ -1,23 +1,23 @@
-# 1. Architecture Diagram — Tracking QA
+# 1. Sơ đồ kiến trúc — Tracking QA Tool
 
 ```mermaid
 flowchart TD
-    CVAT[CVAT Online: Export XML] --> CLI[track_qa.py CLI]
-    BDD[BDD100K MOT JSON] --> CLI
-    CLI --> PARSE[parse_cvat / parse_bdd]
-    PARSE --> TRACKS[Box objects grouped by Track ID]
-    TRACKS --> J[Kalman + Mahalanobis: BOX_JUMP]
-    TRACKS --> F[Temporal gap + extrapolation + IoU: TRACK_FRAGMENT]
-    TRACKS --> S[Motion prediction + Hungarian: ID_SWITCH]
-    J --> R[report function]
-    F --> R
-    S --> R
-    R --> OUT[issues.csv / issues.json / summary.json / report.html]
-    OUT --> REVIEW[Reviewer validates in CVAT]
+    A[CVAT XML] --> UI[Giao diện Streamlit hoặc CLI]
+    B[BDD100K MOT JSON] --> UI
+    C[nuScenes Tracking JSON và manifest] --> UI
+    UI --> P[Bộ đọc và chuẩn hóa dữ liệu]
+    P --> D{Loại dữ liệu}
+    D --> E[Kiểm tra quỹ đạo 2D]
+    D --> F[Kiểm tra quỹ đạo 3D]
+    E --> G[Đổi ID / Đứt quãng / Box nhảy]
+    F --> G
+    G --> H[Tổng hợp cảnh báo]
+    H --> I[Báo cáo CSV / JSON / HTML / ZIP]
+    I --> K[Người kiểm tra xác minh trên CVAT hoặc video]
 ```
 
-**Deployment:** Offline Python 3, NumPy and SciPy on Windows/Linux. No GPU, database, web server or CVAT API required.
+**Luồng xử lý:** nhập annotation → kiểm tra cấu trúc → gom đối tượng theo quỹ đạo → phân tích chuyển động → sinh cảnh báo → xuất báo cáo. Tệp gốc không bị sửa đổi.
 
-**Data flow:** one video annotation → parse valid 2D boxes → group/sort by ID/frame → three independent detectors → flagged issues → CSV/JSON/HTML. The input file is never modified.
+**Công nghệ:** Python, NumPy, SciPy, Streamlit và pandas. Phân tích annotation không bắt buộc có GPU. Giao diện Streamlit gọi công cụ dòng lệnh và hiển thị kết quả.
 
-**Interfaces:** `python track_qa.py --input demo.xml --format cvat --output results` or `--format bdd` for per-video BDD100K MOT JSON.
+**Lưu ý:** Dữ liệu nuScenes cần manifest chứa thứ tự frame và timestamp; dữ liệu 2D và 3D được xử lý bằng các phép kiểm tra khác nhau.

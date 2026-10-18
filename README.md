@@ -1,50 +1,52 @@
-# Tracking QA — CVAT / BDD100K
+# Tracking QA Tool — Công cụ kiểm tra chất lượng gán nhãn theo dõi đối tượng
 
-Offline annotation QA for three suspected error types: `ID_SWITCH`, `TRACK_FRAGMENT`, and `BOX_JUMP`. **Does not edit annotations**.
+Công cụ phát hiện **các trường hợp nghi vấn** về **đổi ID**, **đứt quãng quỹ đạo** và **hộp giới hạn nhảy bất thường** trong dữ liệu Multi-Object Tracking. Công cụ **không tự sửa nhãn**.
 
-## Install
+## Định dạng được hỗ trợ
 
-```bash
+| Dữ liệu | Định dạng | Ghi chú |
+|---|---|---|
+| CVAT for Video | XML | Sử dụng các đối tượng được gán nhãn bằng chế độ Track |
+| BDD100K MOT | JSON | Mỗi lần phân tích một video, có ID đối tượng theo frame |
+| nuScenes Tracking 3D | JSON + manifest JSON | Cần metadata thứ tự frame, scene và thời gian |
+
+## Cài đặt và chạy giao diện
+
+```powershell
 python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-## Run
+Mở `http://localhost:8501`, tải lên annotation, chọn đúng định dạng rồi nhấn **Bắt đầu kiểm tra**. Có thể lọc cảnh báo và tải báo cáo CSV, JSON, HTML, ZIP.
 
-CVAT Online: **Export task dataset → CVAT for video 1.1 → annotations.xml**. Choose *Track* annotations, not independent *Shape* annotations.
+## Chạy bằng dòng lệnh
 
-```bash
+```powershell
 python track_qa.py --input annotations.xml --format cvat --output results
+python track_qa.py --input video.json --format bdd --output results_bdd
+python track_qa.py --input results.json --format nuscenes --manifest manifest.json --output results_nuscenes
 ```
 
-BDD100K MOT: supply **one video** as a JSON array of frames with `frameIndex`, `labels`, `id`, `category`, and `box2d:{x1,y1,x2,y2}`.
+**Lưu ý:** `--format` là tham số kỹ thuật, giữ nguyên `cvat`, `bdd`, `nuscenes`. Kết quả gồm `issues.csv`, `issues.json`, `summary.json`, `report.html`; các tên file và khóa JSON giữ nguyên để tương thích với chương trình khác.
 
-```bash
-python track_qa.py --input video.json --format bdd --output results
+## Các phương pháp phát hiện
+
+- **Box nhảy:** Kalman Filter và khoảng cách Mahalanobis cho dữ liệu 2D; với nuScenes dùng dự đoán vận tốc không đổi và các ngưỡng vị trí/tốc độ/yaw/kích thước.
+- **Đứt quãng:** so sánh hai đoạn quỹ đạo cùng loại bằng dự đoán vị trí và độ gần.
+- **Đổi ID:** ghép vị trí dự đoán và quan sát bằng thuật toán Hungarian, đánh dấu các trường hợp hoán đổi ID nghi vấn.
+
+Điểm bất thường **không phải xác suất lỗi**. Các cảnh báo cần được đối chiếu với video và xác nhận thủ công. Đối với CVAT, cần lưu ý dữ liệu keyframe có thể chưa được nội suy đầy đủ. Các frame trong XML được đánh số từ 0.
+
+## Tài liệu
+
+- [Hướng dẫn Streamlit](STREAMLIT_GUIDE.md)
+- [Hướng dẫn nuScenes](NUSCENES_GUIDE.md)
+- [Sơ đồ kiến trúc](docs/01_architecture.md)
+- [Đặc tả và thiết kế](docs/02_specification_design.md)
+- [Kiểm thử](docs/03_testing.md)
+
+## Kiểm thử
+
+```powershell
+python -m unittest discover -s tests -v
 ```
-
-Outputs: `issues.csv`, `issues.json`, `summary.json`, `report.html`. Open HTML in a browser. Frame indices are **0-based**, matching annotation data; check CVAT's displayed frame numbering.
-
-## Tuning
-
-- `--jump-confidence 0.999`: chi-square 4D Mahalanobis gate for box jumps.
-- `--max-gap 12`: max missing frames between two tracks.
-- `--fragment-max-dist 0.8`: max normalized predicted center distance.
-- `--fragment-min-iou 0.1`: min predicted/observed IoU.
-- `--switch-max-dist 0.8`: max normalized cross-match distance.
-- `--switch-min-gain 0.3`: minimum advantage of swapped vs original assignment.
-- `--min-history 3`: minimum earlier samples before jump/switch checks.
-
-## Important limitations
-
-- This is **heuristic QA**, not ground truth: review every flag visually.
-- Kalman constant-velocity prediction can be inaccurate for turning, zooming, moving cameras, fast perspective changes, occlusion, or sparse keyframes.
-- ID switch detection specifically targets **pairwise swaps between IDs present in both adjacent frames**. It cannot reliably identify every ID reassignment, and uses no image appearance/ReID.
-- Fragmentation detection compares track endpoints and can report multiple candidate merges; it does not resolve them automatically.
-- CVAT XML keyframe tracks may omit interpolated frames. Exported keyframes are used as-is; for rigorous QA of frame-by-frame motion, export dense annotations or expand interpolation first.
-- BDD parser assumes per-video frames and stable label IDs. Keep one video per input to avoid mixing sequences.
-- Scores across error types are not calibrated probabilities.
-
-
-## nuScenes Tracking 3D + Streamlit
-
-Install all dependencies with `python -m pip install -r requirements.txt` (UI and CLI combined). Run `python -m streamlit run app.py`. Select nuScenes and upload tracking result JSON **plus sample manifest**. See [NUSCENES_GUIDE.md](NUSCENES_GUIDE.md) for manifest schema, CLI example and limitations. The legacy `requirements_ui.txt` has been removed.

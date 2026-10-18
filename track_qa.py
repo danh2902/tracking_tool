@@ -33,10 +33,10 @@ def parse_cvat(path):
     root = ET.parse(path).getroot()
     result = []
     if root.tag != 'annotations':
-        raise ValueError('Expected CVAT for video XML with <annotations> root')
+        raise ValueError('Cần tệp CVAT for video XML có phần tử gốc <annotations>')
     tracks = root.findall('track')
     if not tracks:
-        raise ValueError('No <track> found. Export CVAT for video, not CVAT for images (shapes have no stable IDs).')
+        raise ValueError('Không tìm thấy <track>. Hãy xuất CVAT for video, không dùng CVAT for images (shape không có ID xuyên suốt).')
     for track in tracks:
         tid = str(track.get('id'))
         label = track.get('label', 'unknown')
@@ -55,7 +55,7 @@ def parse_bdd(path):
     if isinstance(data, dict):
         data = data.get('frames', data.get('labels', []))
     if not isinstance(data, list):
-        raise ValueError('BDD input must be a list of frame objects')
+        raise ValueError('Dữ liệu BDD phải là danh sách các frame')
     result = []
     for i, frame in enumerate(data):
         f = frame.get('frameIndex', frame.get('frame_id', i))
@@ -147,7 +147,7 @@ def jump_check(tracks, threshold, min_history):
             d2 = kf.innovation(b.z)
             if seen >= min_history and dt == 1 and not (prev.occluded or b.occluded) and d2 > threshold:
                 issues.append(make_issue('BOX_JUMP', b.frame, tid, score=min(d2/threshold,99),
-                    reason='Bounding box differs strongly from Kalman prediction',
+                    reason='Hộp giới hạn lệch đáng kể so với dự đoán Kalman',
                     details={'mahalanobis_sq':round(d2,3),'threshold':round(threshold,3),
                              'previous_frame':prev.frame,'previous_box':prev.xyxy,'current_box':b.xyxy}))
             # Update even if suspicious; avoid a long series of repeated alarms from one outlier.
@@ -194,7 +194,7 @@ def fragmentation_check(tracks, max_gap, max_dist, min_iou):
                 continue
             score = (1/(1+dist))*(0.5+0.5*ov)
             issues.append(make_issue('TRACK_FRAGMENT',b[0].frame,a[0].tid,b[0].tid,score,
-                'Track ends near where another same-class track begins',
+                'Một quỹ đạo kết thúc gần điểm bắt đầu của quỹ đạo khác cùng loại',
                 {'end_frame':a[-1].frame,'start_frame':b[0].frame,'missing_frames':gap,
                  'predicted_iou':round(ov,3),'normalized_center_distance':round(dist,3)}))
     return issues
@@ -237,7 +237,7 @@ def switch_check(tracks, max_dist, min_gain, min_history):
                 gain=identity_cost-swap_cost
                 if gain>=min_gain:
                     issues.append(make_issue('ID_SWITCH',t,sub[i],sub[j],gain,
-                        'Swapped assignment fits predicted motion better than original IDs',
+                        'Phương án hoán đổi ID phù hợp dự đoán chuyển động hơn ID gốc',
                         {'identity_cost':round(identity_cost,3),'swap_cost':round(swap_cost,3),
                          'cost_improvement':round(gain,3)}))
     return issues
@@ -254,36 +254,36 @@ def report(issues, output, n_tracks, n_boxes, settings):
             writer.writerow({**issue,'details':json.dumps(issue['details'],ensure_ascii=False)})
     counts={k:sum(x['type']==k for x in issues) for k in ('ID_SWITCH','TRACK_FRAGMENT','BOX_JUMP')}
     rows='\n'.join('<tr>'+''.join('<td>'+html.escape(str(x[k]))+'</td>' for k in ('type','frame','track_id','other_id','score','reason'))+'</tr>' for x in issues)
-    page='''<!doctype html><html lang="en"><meta charset="utf-8"><title>Tracking QA</title>
+    page='''<!doctype html><html lang="vi"><meta charset="utf-8"><title>Tracking QA</title>
     <style>body{font:15px system-ui;margin:32px;color:#202936}table{border-collapse:collapse;width:100%%}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}th{background:#eef2f7}tr:hover{background:#f5f8ff}code{background:#eee;padding:3px}</style>
-    <h1>Tracking Annotation QA</h1><p>Potential errors only — human review required.</p>
-    <p>Tracks: %s | Boxes: %s | ID switches: %s | Fragments: %s | Box jumps: %s</p>
-    <table><thead><tr><th>Type</th><th>Frame</th><th>Track</th><th>Other track</th><th>Score</th><th>Reason</th></tr></thead><tbody>%s</tbody></table></html>'''%(n_tracks,n_boxes,counts['ID_SWITCH'],counts['TRACK_FRAGMENT'],counts['BOX_JUMP'],rows)
+    <h1>Báo cáo kiểm tra chất lượng Tracking</h1><p>Đây chỉ là cảnh báo nghi vấn; cần người kiểm tra xác nhận.</p>
+    <p>Quỹ đạo: %s | Hộp giới hạn: %s | Đổi ID: %s | Đứt quãng: %s | Box nhảy: %s</p>
+    <table><thead><tr><th>Loại cảnh báo</th><th>Frame</th><th>ID quỹ đạo</th><th>ID liên quan</th><th>Điểm bất thường</th><th>Nguyên nhân</th></tr></thead><tbody>%s</tbody></table></html>'''%(n_tracks,n_boxes,counts['ID_SWITCH'],counts['TRACK_FRAGMENT'],counts['BOX_JUMP'],rows)
     (output/'report.html').write_text(page,encoding='utf-8')
     (output/'summary.json').write_text(json.dumps({'tracks':n_tracks,'boxes':n_boxes,'issues':counts,'settings':settings},indent=2),encoding='utf-8')
     return counts
 
 
 def main():
-    p=argparse.ArgumentParser(description='QA existing 2D tracking annotations (never edits input)')
+    p=argparse.ArgumentParser(description='Kiểm tra chất lượng dữ liệu tracking (không sửa dữ liệu gốc)')
     p.add_argument('--input',required=True,type=Path)
     p.add_argument('--format',choices=['cvat','bdd','nuscenes'],required=True)
     p.add_argument('--output',type=Path,default=Path('results'))
-    p.add_argument('--manifest',type=Path,help='Required for nuScenes: sample_token to scene/frame/timestamp JSON')
-    p.add_argument('--max-speed',type=float,default=55.0,help='nuScenes speed threshold (m/s)')
-    p.add_argument('--max-yaw-rate',type=float,default=3.0,help='nuScenes yaw rate threshold (rad/s)')
-    p.add_argument('--max-size-change',type=float,default=0.6,help='nuScenes relative 3D size change')
-    p.add_argument('--max-time-gap',type=float,default=10.0,help='nuScenes fragmentation max time gap (s)')
-    p.add_argument('--fragment-max-dist-3d',type=float,default=4.0,help='nuScenes fragmentation distance (m)')
-    p.add_argument('--switch-max-dist-3d',type=float,default=4.0,help='nuScenes ID switch association distance (m)')
-    p.add_argument('--switch-min-gain-3d',type=float,default=1.0,help='nuScenes ID switch cost gain (m)')
-    p.add_argument('--max-gap',type=int,default=12,help='Maximum missing frames between two candidate fragments')
-    p.add_argument('--fragment-max-dist',type=float,default=0.8,help='Center distance / box diagonal')
+    p.add_argument('--manifest',type=Path,help='Bắt buộc với nuScenes: ánh xạ sample_token sang scene/frame/timestamp')
+    p.add_argument('--max-speed',type=float,default=55.0,help='Ngưỡng tốc độ nuScenes (m/s)')
+    p.add_argument('--max-yaw-rate',type=float,default=3.0,help='Ngưỡng tốc độ thay đổi hướng nuScenes (rad/s)')
+    p.add_argument('--max-size-change',type=float,default=0.6,help='Ngưỡng thay đổi kích thước 3D tương đối')
+    p.add_argument('--max-time-gap',type=float,default=10.0,help='Khoảng thời gian đứt quãng tối đa (giây)')
+    p.add_argument('--fragment-max-dist-3d',type=float,default=4.0,help='Khoảng cách nối quỹ đạo 3D (m)')
+    p.add_argument('--switch-max-dist-3d',type=float,default=4.0,help='Khoảng cách ghép ID 3D (m)')
+    p.add_argument('--switch-min-gain-3d',type=float,default=1.0,help='Mức cải thiện chi phí khi đổi ID 3D (m)')
+    p.add_argument('--max-gap',type=int,default=12,help='Số frame gián đoạn tối đa giữa hai quỹ đạo')
+    p.add_argument('--fragment-max-dist',type=float,default=0.8,help='Khoảng cách tâm chia cho đường chéo hộp giới hạn')
     p.add_argument('--fragment-min-iou',type=float,default=0.1)
     p.add_argument('--switch-max-dist',type=float,default=0.8)
     p.add_argument('--switch-min-gain',type=float,default=0.3)
     p.add_argument('--min-history',type=int,default=3)
-    p.add_argument('--jump-confidence',type=float,default=0.999,help='Chi-square threshold for 4D measurement')
+    p.add_argument('--jump-confidence',type=float,default=0.999,help='Ngưỡng chi bình phương cho phép đo 4D')
     args=p.parse_args()
     if args.max_gap<0 or args.min_history<2 or not 0<args.jump_confidence<1:
         p.error('Invalid thresholds')
@@ -295,8 +295,8 @@ def main():
             'max_yaw_rate', 'max_size_change', 'max_gap', 'max_time_gap',
             'fragment_max_dist_3d', 'switch_max_dist_3d', 'switch_min_gain_3d')}
         n_tracks, n_boxes, issues, counts = run_nuscenes(args.input, args.manifest, args.output, settings)
-        print(f'Tracks: {n_tracks} | Boxes: {n_boxes} | Alerts: {len(issues)} | {counts}')
-        print(f'Reports: {args.output.resolve()}')
+        print(f'Quỹ đạo: {n_tracks} | Hộp giới hạn: {n_boxes} | Cảnh báo: {len(issues)} | {counts}')
+        print(f'Thư mục báo cáo: {args.output.resolve()}')
         return
     boxes=parse_cvat(args.input) if args.format=='cvat' else parse_bdd(args.input)
     tracks=defaultdict(list)
@@ -308,8 +308,8 @@ def main():
     issues+=fragmentation_check(tracks,args.max_gap,args.fragment_max_dist,args.fragment_min_iou)
     issues+=switch_check(tracks,args.switch_max_dist,args.switch_min_gain,args.min_history)
     counts=report(issues,args.output,len(tracks),len(boxes),vars(args).__str__())
-    print(f'Tracks: {len(tracks)} | Boxes: {len(boxes)} | Alerts: {len(issues)} | {counts}')
-    print(f'Reports: {args.output.resolve()}')
+    print(f'Quỹ đạo: {len(tracks)} | Hộp giới hạn: {len(boxes)} | Cảnh báo: {len(issues)} | {counts}')
+    print(f'Thư mục báo cáo: {args.output.resolve()}')
 
 if __name__=='__main__':
     main()

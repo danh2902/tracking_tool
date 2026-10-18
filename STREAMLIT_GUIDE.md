@@ -1,31 +1,28 @@
-# Tracking QA Dashboard (Streamlit)
+# Hướng dẫn sử dụng giao diện Streamlit
 
-## Cài đặt trên Windows / PowerShell
+## Cài đặt
 
-Đặt `app.py`, `requirements.txt` cạnh `track_qa.py` và `requirements.txt` trong repository hiện có.
+Đặt `app.py`, `track_qa.py`, `nuscenes_qa.py` và `requirements.txt` trong cùng thư mục.
 
 ```powershell
-cd E:\tracking_qa_tool_1\tracking_qa_tool
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Trình duyệt mở `http://localhost:8501`. Upload **CVAT for video XML** hoặc **BDD100K MOT JSON của một video**, chọn đúng định dạng, điều chỉnh ngưỡng và bấm **Chạy Tracking QA**. Xem bảng cảnh báo, lọc theo loại lỗi và tải ZIP gồm CSV/JSON/HTML/summary.
+Truy cập `http://localhost:8501`.
 
-## Ghi chú
+## Quy trình
 
-- Giao diện gọi `track_qa.py` hiện có bằng Python subprocess, không thay đổi thuật toán.
-- Đầu vào và báo cáo trung gian đặt trong thư mục tạm; file gốc không bị sửa.
-- Chỉ dùng trên máy cá nhân/local, không đưa lên server công khai khi chưa bổ sung xác thực và giới hạn tài nguyên.
-- Giới hạn mỗi lần chạy 300 giây; với dữ liệu lớn nên chia theo video.
-- XML chỉ có keyframe có thể thiếu dữ liệu chuyển động; cần xuất dense annotation để đánh giá tốt hơn.
-- Không hiển thị video/overlay vì chưa nhận dữ liệu frame hình ảnh.
-- Đây là các cảnh báo heuristic; không tự động sửa annotation.
+1. Tải lên file CVAT XML, BDD100K MOT JSON hoặc nuScenes Tracking JSON.
+2. Chọn định dạng tương ứng; với nuScenes cần tải thêm `manifest.json`.
+3. Điều chỉnh ngưỡng ở thanh bên nếu cần.
+4. Nhấn **Bắt đầu kiểm tra**.
+5. Xem thống kê, lọc cảnh báo và tải báo cáo ZIP/CSV/HTML.
 
-## Cập nhật GitHub
+## Lưu ý
 
-```powershell
-git add app.py requirements.txt STREAMLIT_GUIDE.md
-git commit -m "Add Streamlit dashboard for tracking QA"
-git push
-```
+- Giao diện gọi `track_qa.py` bằng tiến trình Python và không thay đổi file đầu vào.
+- Các báo cáo trung gian được lưu tạm; mỗi lần chạy giới hạn 300 giây.
+- Cảnh báo không đồng nghĩa với lỗi đã được xác nhận.
+- Ứng dụng chưa có chức năng xem trực tiếp video và bounding box trên từng frame.
+- Khi triển khai công khai cần chú ý giới hạn dung lượng file, thời gian xử lý và dữ liệu nhạy cảm.
